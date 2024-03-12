@@ -22,6 +22,7 @@ globals [
 
 patches-own [
   age ; if not part of a snake, age=-1. Otherwise age = ticks spent being a snake patch.
+  dist ;distance from the food
 ]
 
 breed [snakes snake]
@@ -51,14 +52,22 @@ end
 
 to setup-walls  ; observer
   ; none-wall patches are colored black:
-  ask patches [ set age -1
-                set pcolor black ]
+  ask patches
+  [
+    set age -1
+    set dist 10000
+    set pcolor black
+  ]
 
   set wall-color gray
 
   ifelse map-file = "empty" [
     ; Set the edge of the environment to the wall-color:
-    ask patches with [abs pxcor = max-pxcor or abs pycor = max-pycor] [set pcolor wall-color]
+    ask patches with [abs pxcor = max-pxcor or abs pycor = max-pycor]
+    [
+      set pcolor wall-color
+      set dist 9999999999
+    ]
   ] [  ; load the map:
     let map_file_path (word "maps/" map-file ".csv")
     ifelse (file-exists? map_file_path) [
@@ -115,6 +124,7 @@ end
 ; Make a random patch green (e.g. the color of the food)
 to make-food
   ask one-of patches with [pcolor = black] [
+    set dist 0
     set pcolor green
   ]
 end
@@ -130,11 +140,28 @@ to go ; observer
   ask snakes [
     ; 1. Set which direction the snake is facing:
     ;  You will want to expand the following if statement -- to call the approaches that you implement
-    ( ifelse mode = "random" [
-      face-random-neighboring-patch
-    ] [  ; else:
-      ; human controlled -- do nothing
-    ] )
+    ( ifelse mode = "random"
+      [
+        face-random-neighboring-patch
+      ]
+      [
+        ( ifelse mode = "human"
+        [
+           ;do nothing
+        ]
+        [
+           ( ifelse mode = "dijkstra's"
+              [
+                dijkstra
+              ]
+              [
+                ;other
+              ]
+            )
+          ]
+        )
+      ]
+    )
 
     ; 2. move the head of the snake forward
     fd 1
@@ -227,15 +254,39 @@ to-report report-snake-age [team-name]
 end
 
 ;;---------------------
+
+to dijkstra
+
+  let d 0
+
+  loop
+  [
+    ask patches with [dist = d]
+    [
+
+      ask neighbors with [pcolor = black and dist > d]
+      [
+        set dist d + 1
+      ]
+    ]
+
+    if(d > 40)
+    [
+      stop
+    ]
+
+    set d d + 1
+  ]
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
 10
-680
-481
+669
+470
 -1
 -1
-14.0
+11.0
 1
 10
 1
@@ -245,10 +296,10 @@ GRAPHICS-WINDOW
 0
 0
 1
--16
-16
--16
-16
+-20
+20
+-20
+20
 1
 1
 1
@@ -296,7 +347,7 @@ CHOOSER
 531
 red-team-mode
 red-team-mode
-"human" "random"
+"human" "random" "dijkstra's"
 1
 
 BUTTON
@@ -374,8 +425,8 @@ CHOOSER
 530
 blue-team-mode
 blue-team-mode
-"human" "random"
-1
+"human" "random" "dijkstra's"
+2
 
 BUTTON
 537
@@ -453,7 +504,7 @@ CHOOSER
 map-file
 map-file
 "empty" "snake-map-1" "snake-map-2" "snake-map-3"
-1
+0
 
 SWITCH
 33
@@ -845,7 +896,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.3.0
+NetLogo 6.4.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
