@@ -55,7 +55,6 @@ to setup-walls  ; observer
   ask patches
   [
     set age -1
-    set dist 10000
     set pcolor black
   ]
 
@@ -66,7 +65,6 @@ to setup-walls  ; observer
     ask patches with [abs pxcor = max-pxcor or abs pycor = max-pycor]
     [
       set pcolor wall-color
-      set dist 9999999999
     ]
   ] [  ; load the map:
     let map_file_path (word "maps/" map-file ".csv")
@@ -124,7 +122,6 @@ end
 ; Make a random patch green (e.g. the color of the food)
 to make-food
   ask one-of patches with [pcolor = black] [
-    set dist 0
     set pcolor green
   ]
 end
@@ -140,28 +137,19 @@ to go ; observer
   ask snakes [
     ; 1. Set which direction the snake is facing:
     ;  You will want to expand the following if statement -- to call the approaches that you implement
-    ( ifelse mode = "random"
-      [
-        face-random-neighboring-patch
-      ]
-      [
-        ( ifelse mode = "human"
-        [
-           ;do nothing
-        ]
-        [
-           ( ifelse mode = "dijkstra's"
-              [
-                dijkstra
-              ]
-              [
-                ;other
-              ]
-            )
-          ]
-        )
-      ]
-    )
+
+    if mode = "random"
+    [
+      face-random-neighboring-patch
+    ]
+    if mode = "dijkstra's"
+    [
+      dijkstra
+    ]
+    if mode = "dfs"
+    [
+      dfs
+    ]
 
     ; 2. move the head of the snake forward
     fd 1
@@ -206,6 +194,23 @@ to go ; observer
     user-message (word "Game Over! Team " [team] of winner " won!")
     stop
   ])
+
+  if food-random-movement and ticks mod 2 = 0
+  [
+    ask patches with [pcolor = green]
+    [
+      ask one-of neighbors4 with [pcolor = black]
+      [
+        set pcolor green
+      ]
+
+      if count neighbors4 with [pcolor = green] > 0
+      [
+        set pcolor black
+      ]
+    ]
+  ]
+
   tick
 end
 
@@ -230,19 +235,19 @@ end
 ;;---------------------
 ;; Human controlled snakes:
 to head-up [selected-team]
-  ask snakes with [team = selected-team] [ set heading 0 ]
+  ask snakes with [team = selected-team and mode = "human"] [ set heading 0 ]
 end
 ;----
 to head-right [selected-team]
-  ask snakes with [team = selected-team] [ set heading 90 ]
+  ask snakes with [team = selected-team and mode = "human"] [ set heading 90 ]
 end
 ;----
 to head-down [selected-team]
-  ask snakes with [team = selected-team] [ set heading 180 ]
+  ask snakes with [team = selected-team and mode = "human"] [ set heading 180 ]
 end
 ;----
 to head-left [selected-team]
-  ask snakes with [team = selected-team] [ set heading 270 ]
+  ask snakes with [team = selected-team and mode = "human"] [ set heading 270 ]
 end
 ;;---------------------
 
@@ -257,26 +262,81 @@ end
 
 to dijkstra
 
+  ask patches with [pcolor = black]
+  [
+    set dist 1000
+  ]
+
+  ask patches with [pcolor = green]
+  [
+    set dist 0
+  ]
+
+  ask patches with [pcolor = red + 11]
+  [
+    set dist 9999999999
+  ]
+
+  ask patches with [pcolor = blue + 11]
+  [
+    set dist 9999999999
+  ]
+
+  ask patches with [pcolor = wall-color]
+  [
+    set dist 9999999999
+  ]
+
   let d 0
 
-  loop
+  while [d < max-pxcor * 4]  ; creates nodes from the patches and assigns them a distance of how far away they are from the food if they are a black patch
   [
     ask patches with [dist = d]
     [
-
-      ask neighbors with [pcolor = black and dist > d]
+      ask neighbors4 with [pcolor = black and dist > d]
       [
         set dist d + 1
       ]
     ]
-
-    if(d > 40)
-    [
-      stop
-    ]
-
     set d d + 1
   ]
+
+ ask snakes
+  [
+    let next-patch min-one-of neighbors4 with [member? pcolor clear-colors] [dist]
+
+    if next-patch = nobody
+    [
+      set next-patch one-of neighbors4
+    ]
+
+    face next-patch
+
+  ]
+
+end
+
+to dfs
+
+  ask snakes
+  [
+    let visited [self] of patches with [pxcor = [xcor] of snake 0 and pycor = [ycor] of snake 0]
+
+    let dfsstack [self] of neighbors4 with [pcolor = black]
+
+    ask item 0 dfsstack
+    [
+      let tempvisit item 0 dfsstack
+      set visited insert-item 0 visited tempvisit
+      set dfsstack remove-item 0 dfsstack
+      let tempneighbors [self] of neighbors4 with [pcolor = black]
+      set dfsstack sentence dfsstack tempneighbors
+      show visited
+    ]
+  ]
+
+
+
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -347,8 +407,8 @@ CHOOSER
 531
 red-team-mode
 red-team-mode
-"human" "random" "dijkstra's"
-1
+"human" "random" "dijkstra's" "dfs"
+3
 
 BUTTON
 251
@@ -425,7 +485,7 @@ CHOOSER
 530
 blue-team-mode
 blue-team-mode
-"human" "random" "dijkstra's"
+"human" "random" "dijkstra's" "dfs"
 2
 
 BUTTON
@@ -513,7 +573,7 @@ SWITCH
 221
 two-player
 two-player
-0
+1
 1
 -1000
 
@@ -536,7 +596,7 @@ max-snake-age
 max-snake-age
 3
 30
-10.0
+30.0
 1
 1
 NIL
@@ -563,6 +623,27 @@ report-snake-age \"red\"
 0
 1
 11
+
+SWITCH
+788
+102
+980
+135
+food-random-movement
+food-random-movement
+1
+1
+-1000
+
+TEXTBOX
+795
+46
+945
+64
+Additional features
+11
+0.0
+1
 
 @#$#@#$#@
 # CMP2020 -- Assessment Item 1
