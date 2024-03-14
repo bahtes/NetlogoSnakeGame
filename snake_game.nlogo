@@ -22,7 +22,12 @@ globals [
 
 patches-own [
   age ; if not part of a snake, age=-1. Otherwise age = ticks spent being a snake patch.
-  dist ;distance from the food
+
+  dist ;distance from the food (dijkstras)
+
+  explored ;if it has been explored (dfs)
+  explorable ;if it is explorable (dfs)
+  target ;if it is the target block (dfs)
 ]
 
 breed [snakes snake]
@@ -144,6 +149,7 @@ to go ; observer
     ]
     if mode = "dijkstra's"
     [
+      setpatchdist
       dijkstra
     ]
     if mode = "dfs"
@@ -260,7 +266,7 @@ end
 
 ;;---------------------
 
-to dijkstra
+to setpatchdist
 
   ask patches with [pcolor = black]
   [
@@ -301,7 +307,11 @@ to dijkstra
     set d d + 1
   ]
 
- ask snakes
+end
+
+to dijkstra
+
+ ask snakes with [mode = "dijkstra's"]
   [
     let next-patch min-one-of neighbors4 with [member? pcolor clear-colors] [dist]
 
@@ -316,22 +326,50 @@ to dijkstra
 
 end
 
+;;=======================================================
+
 to dfs
 
-  ask snakes
+  ask patches with [pcolor != black]
   [
-    let visited [self] of patches with [pxcor = [xcor] of snake 0 and pycor = [ycor] of snake 0]
+    set explorable false
+    set explored false
+  ]
 
-    let dfsstack [self] of neighbors4 with [pcolor = black]
+  ask patches with [pcolor = black or pcolor = green]
+  [
+    set explorable true
+    set explored false
+  ]
 
-    ask item 0 dfsstack
+  ask snakes with [mode = "dfs"]
+  [
+    let nodes [self] of neighbors4 with [explorable and not explored]
+
+    while [count patches with [explorable and not explored] > 0]
     [
-      let tempvisit item 0 dfsstack
-      set visited insert-item 0 visited tempvisit
-      set dfsstack remove-item 0 dfsstack
-      let tempneighbors [self] of neighbors4 with [pcolor = black]
-      set dfsstack sentence dfsstack tempneighbors
-      show visited
+      ask item 0 nodes
+      [
+        if pcolor = green
+        [
+          set target true
+          show(word "target found")
+        ]
+
+        let tempnodes [self] of neighbors4 with [explorable and not explored]
+
+        set nodes remove-item 0 nodes
+
+        let i 0
+
+        while [i < length tempnodes]
+        [
+          set nodes insert-item 0 nodes item i tempnodes
+          set i i + 1
+        ]
+
+        set explored true
+      ]
     ]
   ]
 
