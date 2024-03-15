@@ -18,6 +18,8 @@ globals [
   clear-colors ; list of colors that patches the snakes can enter have
 
   level tool ; ignore these two variables they are here to prevent warnings when loading the world/map.
+
+  visited
 ]
 
 patches-own [
@@ -50,7 +52,12 @@ to setup ; observer
   ; there will alwasy be two randomly placed pieces of food within the environment:
   make-food
   make-food
+
+
+
   reset-ticks
+
+  dfs
 end
 
 ;;--------------------------------
@@ -140,6 +147,9 @@ to go ; observer
   let winner nobody ; nobody has won the game yet...
 
   ask snakes [
+
+
+
     ; 1. Set which direction the snake is facing:
     ;  You will want to expand the following if statement -- to call the approaches that you implement
 
@@ -154,23 +164,32 @@ to go ; observer
     ]
     if mode = "dfs"
     [
-      dfs
+      show(word "go: " visited)
+
+      face item 0 visited
+      set visited remove-item 0 visited
     ]
 
     ; 2. move the head of the snake forward
     fd 1
 
-    ; 3. check for a collision (and thus game lost)
-    if not member? pcolor clear-colors [
-      set loser self
-      stop
+    if collision
+    [
+      if not member? pcolor clear-colors
+      [
+        set loser self
+        stop
+      ]
     ]
 
     ; 4. eat food
     if pcolor = green [
       make-food
+      dfs
+      show(word "test1")
       set snake-age snake-age + 1
     ]
+
 
     ; 5. check if max age reached (and thus game won)
     if snake-age >= max-snake-age [
@@ -192,7 +211,7 @@ to go ; observer
     set age 0
   ]
 
-  ; A collision has happened: show message and stop the game
+   ;A collision has happened: show message and stop the game
   (ifelse loser != nobody [
     user-message (word "Game Over! Team " [team] of loser " lost")
     stop
@@ -330,33 +349,39 @@ end
 
 to dfs
 
-  ask patches with [pcolor != black]
+  show(word "test2")
+  set visited []
+
+  ask patches with [pcolor != grey]
   [
     set explorable false
     set explored false
+    set target false
   ]
 
   ask patches with [pcolor = black or pcolor = green]
   [
     set explorable true
     set explored false
+    set target false
   ]
 
   ask snakes with [mode = "dfs"]
   [
-    let nodes [self] of neighbors4 with [explorable and not explored]
+    let nodes [self] of neighbors4 with [explorable = true and explored = false]
 
-    while [count patches with [explorable and not explored] > 0]
+    while [count patches with [explorable = true and explored = false] > 0 and count patches with [target = true] < 1]
     [
+
       ask item 0 nodes
       [
         if pcolor = green
         [
           set target true
-          show(word "target found")
+          set explored true
         ]
 
-        let tempnodes [self] of neighbors4 with [explorable and not explored]
+        let tempnodes [self] of neighbors4 with [explorable = true and explored = false]
 
         set nodes remove-item 0 nodes
 
@@ -368,9 +393,16 @@ to dfs
           set i i + 1
         ]
 
+
+        set visited insert-item (length visited) visited item 0 nodes
+
         set explored true
       ]
+
     ]
+
+    show(word "dfs: " visited)
+
   ]
 
 
@@ -682,6 +714,17 @@ Additional features
 11
 0.0
 1
+
+SWITCH
+841
+182
+944
+215
+collision
+collision
+1
+1
+-1000
 
 @#$#@#$#@
 # CMP2020 -- Assessment Item 1
