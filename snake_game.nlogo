@@ -177,6 +177,10 @@ to go ; observer
       face item 0 bfspath
       set bfspath remove-item 0 bfspath
     ]
+    if mode = "greedy"
+    [
+      greedy
+    ]
 
     ; 2. move the head of the snake forward
     fd 1
@@ -672,18 +676,63 @@ end
 
 to greedy
 
-  let grtarget patches with [pcolor = green]
+  ask snakes
+  [
+    let grtarget min-one-of patches with [pcolor = green] [distance myself]
+
+    ask patches with [dist < 9999999]
+    [
+      set dist 9999999
+    ]
+
+    ask patch-at-heading-and-distance 0 1
+    [
+      if pcolor = black or pcolor = green
+      [
+        set dist distance grtarget
+      ]
+    ]
+
+    ask patch-at-heading-and-distance 90 1
+    [
+      if pcolor = black or pcolor = green
+      [
+        set dist distance grtarget
+      ]
+    ]
+
+    ask patch-at-heading-and-distance 180 1
+    [
+      if pcolor = black or pcolor = green
+      [
+        set dist distance grtarget
+      ]
+    ]
+
+    ask patch-at-heading-and-distance 270 1
+    [
+      if pcolor = black or pcolor = green
+      [
+        set dist distance grtarget
+      ]
+    ]
+
+    face min-one-of patches [dist]
+  ]
+
+
+
 
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
 10
-669
-470
+680
+481
 -1
 -1
-11.0
+14.0
 1
 10
 1
@@ -693,10 +742,10 @@ GRAPHICS-WINDOW
 0
 0
 1
--20
-20
--20
-20
+-16
+16
+-16
+16
 1
 1
 1
@@ -740,12 +789,12 @@ NIL
 CHOOSER
 477
 486
-615
+640
 531
 red-team-mode
 red-team-mode
 "human" "random" "dijkstra's" "dfs" "bfs" "greedy"
-4
+5
 
 BUTTON
 251
@@ -818,12 +867,12 @@ NIL
 CHOOSER
 194
 485
-320
+357
 530
 blue-team-mode
 blue-team-mode
 "human" "random" "dijkstra's" "dfs" "bfs" "greedy"
-4
+2
 
 BUTTON
 537
@@ -901,7 +950,7 @@ CHOOSER
 map-file
 map-file
 "empty" "snake-map-1" "snake-map-2" "snake-map-3"
-0
+2
 
 SWITCH
 33
@@ -933,7 +982,7 @@ max-snake-age
 max-snake-age
 3
 30
-10.0
+30.0
 1
 1
 NIL
@@ -989,7 +1038,7 @@ SWITCH
 208
 collision
 collision
-1
+0
 1
 -1000
 
@@ -1017,8 +1066,18 @@ TEXTBOX
 1211
 75
 1361
-355
-Known bugs\n\n1. two player mode when both using dfs or both using bfs\n\n2. sometimes on some maps dfs/bfs will go through walls (improved this but still happens but very rarely)\n\n3. sometimes dfs/bfs will travel at an angle I belive the cause of this is the same as the cause for bug 2 which I belive is when the path list does not correctly remove items and it ends up having a patch path with no unexplored patches next to it
+439
+Known bugs\n\n1. two player mode when both using dfs or both using bfs\n\n2. sometimes on some maps dfs/bfs will go through walls (improved this but still happens but very rarely) this happens as dfs/bfs is call once every time food is eaten so it doesnt actually know where the snake is and will collide with itself so I turn collision off when using it\n\n3. sometimes dfs/bfs will travel at an angle I belive the cause of this is the same as the cause for bug 2 which I belive is when the path list does not correctly remove items and it ends up having a patch path with no unexplored patches next to it
+11
+0.0
+1
+
+TEXTBOX
+704
+492
+917
+520
+The dijkstra's mode is an informed search
 11
 0.0
 1
