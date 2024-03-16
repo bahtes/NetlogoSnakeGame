@@ -19,7 +19,7 @@ globals [
 
   level tool ; ignore these two variables they are here to prevent warnings when loading the world/map.
 
-  visited
+  path
 ]
 
 patches-own [
@@ -148,8 +148,6 @@ to go ; observer
 
   ask snakes [
 
-
-
     ; 1. Set which direction the snake is facing:
     ;  You will want to expand the following if statement -- to call the approaches that you implement
 
@@ -164,10 +162,8 @@ to go ; observer
     ]
     if mode = "dfs"
     [
-      show(word "go: " visited)
-
-      face item 0 visited
-      set visited remove-item 0 visited
+      face item 0 path
+      set path remove-item 0 path
     ]
 
     ; 2. move the head of the snake forward
@@ -184,9 +180,15 @@ to go ; observer
 
     ; 4. eat food
     if pcolor = green [
+
+      set pcolor black
+
       make-food
-      dfs
-      show(word "test1")
+
+      if mode = "dfs"
+      [
+        dfs
+      ]
       set snake-age snake-age + 1
     ]
 
@@ -349,10 +351,11 @@ end
 
 to dfs
 
-  show(word "test2")
-  set visited []
+  set path []
 
-  ask patches with [pcolor != grey]
+  show(path)
+
+  ask patches with [pcolor = grey or pcolor != black or pcolor != green]
   [
     set explorable false
     set explored false
@@ -370,39 +373,53 @@ to dfs
   [
     let nodes [self] of neighbors4 with [explorable = true and explored = false]
 
+    if length nodes = 0
+    [
+      set path one-of neighbors4
+    ]
+
     while [count patches with [explorable = true and explored = false] > 0 and count patches with [target = true] < 1]
     [
 
       ask item 0 nodes
       [
-        if pcolor = green
+        ifelse pcolor = green
         [
           set target true
           set explored true
+          set path insert-item (length path) path item 0 nodes
+          show(word "target" patch pxcor pycor)
         ]
-
-        let tempnodes [self] of neighbors4 with [explorable = true and explored = false]
-
-        set nodes remove-item 0 nodes
-
-        let i 0
-
-        while [i < length tempnodes]
         [
-          set nodes insert-item 0 nodes item i tempnodes
-          set i i + 1
+          let tempnodes [self] of neighbors4 with [explorable = true and explored = false]
+
+          ifelse length tempnodes = 0
+          [
+            set path remove-item (length path - 1) path
+            set explored true
+            set nodes remove-item 0 nodes
+          ]
+          [
+            set path insert-item (length path) path item 0 nodes
+
+            set nodes remove-item 0 nodes
+
+            let i 0
+
+            while [i < length tempnodes]
+            [
+              set nodes insert-item 0 nodes item i tempnodes
+              set i i + 1
+            ]
+
+            set explored true
+          ]
         ]
-
-
-        set visited insert-item (length visited) visited item 0 nodes
-
-        set explored true
       ]
 
     ]
 
-    show(word "dfs: " visited)
-
+    show(path)
   ]
 
 
@@ -412,11 +429,11 @@ end
 GRAPHICS-WINDOW
 210
 10
-669
-470
+680
+481
 -1
 -1
-11.0
+14.0
 1
 10
 1
@@ -426,10 +443,10 @@ GRAPHICS-WINDOW
 0
 0
 1
--20
-20
--20
-20
+-16
+16
+-16
+16
 1
 1
 1
@@ -666,7 +683,7 @@ max-snake-age
 max-snake-age
 3
 30
-30.0
+10.0
 1
 1
 NIL
