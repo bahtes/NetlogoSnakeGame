@@ -19,7 +19,10 @@ globals [
 
   level tool ; ignore these two variables they are here to prevent warnings when loading the world/map.
 
-  path
+  dfspath
+
+  bfspath
+
 ]
 
 patches-own [
@@ -38,6 +41,7 @@ snakes-own [
   mode ; how is the snake controlled.
   snake-age ; i.e., how long is the snake
   snake-color ; color of the patches that make up the snake
+
 ]
 
 ;;=======================================================
@@ -57,13 +61,16 @@ to setup ; observer
 
   reset-ticks
 
+
   dfs
+  bfs
+
 end
 
 ;;--------------------------------
 
 to setup-walls  ; observer
-  ; none-wall patches are colored black:
+                ; none-wall patches are colored black:
   ask patches
   [
     set age -1
@@ -94,7 +101,7 @@ end
 ;;--------------------------------
 
 to setup-snakes  ; observer
-  ; create the red/orange snake:
+                 ; create the red/orange snake:
   create-snakes 1 [
     set team "red" ; /orange
     set xcor max-pxcor - 1
@@ -122,9 +129,9 @@ to setup-snakes  ; observer
 
     ;; Create the initial snake body
     ask patch [xcor] of self  0 [set pcolor [snake-color] of myself
-                                 set age 0 ]
+      set age 0 ]
     ask patch [xcor] of self  -1 [set pcolor [snake-color] of myself
-                                  set age 1]
+      set age 1]
   ]
 end
 
@@ -162,8 +169,13 @@ to go ; observer
     ]
     if mode = "dfs"
     [
-      face item 0 path
-      set path remove-item 0 path
+      face item 0 dfspath
+      set dfspath remove-item 0 dfspath
+    ]
+    if mode = "bfs"
+    [
+      face item 0 bfspath
+      set bfspath remove-item 0 bfspath
     ]
 
     ; 2. move the head of the snake forward
@@ -185,10 +197,35 @@ to go ; observer
 
       make-food
 
-      if mode = "dfs"
+      carefully
+      [
+        ask last dfspath
+        [
+          if pcolor != green
+          [
+            dfs
+          ]
+        ]
+      ]
       [
         dfs
       ]
+
+      carefully
+      [
+        ask last bfspath
+        [
+          if pcolor != green
+          [
+            bfs
+          ]
+        ]
+      ]
+      [
+        bfs
+      ]
+
+
       set snake-age snake-age + 1
     ]
 
@@ -213,7 +250,7 @@ to go ; observer
     set age 0
   ]
 
-   ;A collision has happened: show message and stop the game
+  ;A collision has happened: show message and stop the game
   (ifelse loser != nobody [
     user-message (word "Game Over! Team " [team] of loser " lost")
     stop
@@ -332,7 +369,7 @@ end
 
 to dijkstra
 
- ask snakes with [mode = "dijkstra's"]
+  ask snakes with [mode = "dijkstra's"]
   [
     let next-patch min-one-of neighbors4 with [member? pcolor clear-colors] [dist]
 
@@ -351,18 +388,18 @@ end
 
 to dfs
 
-  set path []
+  set dfspath []
 
-  show(path)
+  let nodes []
 
-  ask patches with [pcolor = grey or pcolor != black or pcolor != green]
+  ask patches with [pcolor != black or pcolor != green]
   [
     set explorable false
     set explored false
     set target false
   ]
 
-  ask patches with [pcolor = black or pcolor = green]
+  ask patches with [pcolor = black or pcolor = green or pcolor = red + 11 or pcolor = blue + 11]
   [
     set explorable true
     set explored false
@@ -371,69 +408,282 @@ to dfs
 
   ask snakes with [mode = "dfs"]
   [
-    let nodes [self] of neighbors4 with [explorable = true and explored = false]
 
-    if length nodes = 0
+    let n 0
+
+    ask patch-at-heading-and-distance 0 1
     [
-      set path one-of neighbors4
+      if explored = false and explorable = true
+      [
+        set nodes insert-item n nodes self
+        set n n + 1
+      ]
     ]
 
-    while [count patches with [explorable = true and explored = false] > 0 and count patches with [target = true] < 1]
+    ask patch-at-heading-and-distance 90 1
     [
-
-      ask item 0 nodes
+      if explored = false and explorable = true
       [
-        ifelse pcolor = green
-        [
-          set target true
-          set explored true
-          set path insert-item (length path) path item 0 nodes
-          show(word "target" patch pxcor pycor)
-        ]
-        [
-          let tempnodes [self] of neighbors4 with [explorable = true and explored = false]
+        set nodes insert-item n nodes self
+        set n n + 1
+      ]
+    ]
 
-          ifelse length tempnodes = 0
+    ask patch-at-heading-and-distance 180 1
+    [
+      if explored = false and explorable = true
+      [
+        set nodes insert-item n nodes self
+        set n n + 1
+      ]
+    ]
+
+    ask patch-at-heading-and-distance 270 1
+    [
+      if explored = false and explorable = true
+      [
+        set nodes insert-item n nodes self
+        set n n + 1
+      ]
+    ]
+
+    ifelse n = 0
+    [
+      set dfspath one-of neighbors4
+    ]
+    [
+      while [count patches with [explorable = true and explored = false] > 0 and count patches with [target = true] < 1]
+      [
+
+        ask item 0 nodes
+        [
+          ifelse pcolor = green
           [
-            set path remove-item (length path - 1) path
+            set target true
             set explored true
-            set nodes remove-item 0 nodes
+
+            set dfspath insert-item (length dfspath) dfspath item 0 nodes
           ]
           [
-            set path insert-item (length path) path item 0 nodes
-
             set nodes remove-item 0 nodes
 
-            let i 0
+            set n 0
 
-            while [i < length tempnodes]
+            ask patch-at-heading-and-distance 0 1
             [
-              set nodes insert-item 0 nodes item i tempnodes
-              set i i + 1
+              if explored = false and explorable = true
+              [
+                set nodes insert-item n nodes self
+                set n n + 1
+              ]
             ]
 
-            set explored true
+            ask patch-at-heading-and-distance 90 1
+            [
+              if explored = false and explorable = true
+              [
+                set nodes insert-item n nodes self
+                set n n + 1
+              ]
+            ]
+
+            ask patch-at-heading-and-distance 180 1
+            [
+              if explored = false and explorable = true
+              [
+                set nodes insert-item n nodes self
+                set n n + 1
+              ]
+            ]
+
+            ask patch-at-heading-and-distance 270 1
+            [
+              if explored = false and explorable = true
+              [
+                set nodes insert-item n nodes self
+                set n n + 1
+              ]
+            ]
+
+            ifelse n = 0
+            [
+              set dfspath remove-item (length dfspath - 1) dfspath
+              set explored true
+            ]
+            [
+              set dfspath insert-item (length dfspath) dfspath self
+
+              set explored true
+            ]
+
           ]
+
         ]
       ]
-
     ]
 
-    show(path)
   ]
 
+end
 
+
+
+;;=======================================================
+
+to bfs
+
+  set bfspath []
+
+  let nodes []
+
+  ask patches with [pcolor != black or pcolor != green]
+  [
+    set explorable false
+    set explored false
+    set target false
+  ]
+
+  ask patches with [pcolor = black or pcolor = green or pcolor = red + 11 or pcolor = blue + 11]
+  [
+    set explorable true
+    set explored false
+    set target false
+  ]
+
+  ask snakes with [mode = "bfs"]
+  [
+
+    ask patch-at-heading-and-distance 0 1
+    [
+      if explored = false and explorable = true
+      [
+        set nodes insert-item 0 nodes self
+      ]
+    ]
+
+    ask patch-at-heading-and-distance 90 1
+    [
+      if explored = false and explorable = true
+      [
+        set nodes insert-item 0 nodes self
+      ]
+    ]
+
+    ask patch-at-heading-and-distance 180 1
+    [
+      if explored = false and explorable = true
+      [
+        set nodes insert-item 0 nodes self
+      ]
+    ]
+
+    ask patch-at-heading-and-distance 270 1
+    [
+      if explored = false and explorable = true
+      [
+        set nodes insert-item 0 nodes self
+      ]
+    ]
+
+    ifelse length nodes = 0
+    [
+      set bfspath one-of neighbors4
+    ]
+    [
+      while [count patches with [explorable = true and explored = false] > 0 and count patches with [target = true] < 1]
+      [
+
+        ask item 0 nodes
+        [
+          ifelse pcolor = green
+          [
+            set target true
+            set explored true
+
+            set bfspath insert-item (length bfspath) bfspath item 0 nodes
+          ]
+          [
+            set nodes remove-item 0 nodes
+
+            let n 0
+
+            ask patch-at-heading-and-distance 0 1
+            [
+              if explored = false and explorable = true
+              [
+                set nodes insert-item 0 nodes self
+                set n n + 1
+              ]
+            ]
+
+            ask patch-at-heading-and-distance 90 1
+            [
+              if explored = false and explorable = true
+              [
+                set nodes insert-item 0 nodes self
+                set n n + 1
+              ]
+            ]
+
+            ask patch-at-heading-and-distance 180 1
+            [
+              if explored = false and explorable = true
+              [
+                set nodes insert-item 0 nodes self
+                set n n + 1
+              ]
+            ]
+
+            ask patch-at-heading-and-distance 270 1
+            [
+              if explored = false and explorable = true
+              [
+                set nodes insert-item 0 nodes self
+                set n n + 1
+              ]
+            ]
+
+            ifelse n = 0
+            [
+              set bfspath remove-item (length bfspath - 1) bfspath
+              set explored true
+            ]
+            [
+              set bfspath insert-item (length bfspath) bfspath self
+
+              set explored true
+            ]
+
+          ]
+
+        ]
+      ]
+    ]
+
+  ]
+
+end
+
+
+
+;;=======================================================
+
+
+
+to greedy
+
+  let grtarget patches with [pcolor = green]
 
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
 10
-680
-481
+669
+470
 -1
 -1
-14.0
+11.0
 1
 10
 1
@@ -443,10 +693,10 @@ GRAPHICS-WINDOW
 0
 0
 1
--16
-16
--16
-16
+-20
+20
+-20
+20
 1
 1
 1
@@ -494,8 +744,8 @@ CHOOSER
 531
 red-team-mode
 red-team-mode
-"human" "random" "dijkstra's" "dfs"
-3
+"human" "random" "dijkstra's" "dfs" "bfs" "greedy"
+4
 
 BUTTON
 251
@@ -572,8 +822,8 @@ CHOOSER
 530
 blue-team-mode
 blue-team-mode
-"human" "random" "dijkstra's" "dfs"
-2
+"human" "random" "dijkstra's" "dfs" "bfs" "greedy"
+4
 
 BUTTON
 537
@@ -660,7 +910,7 @@ SWITCH
 221
 two-player
 two-player
-1
+0
 1
 -1000
 
@@ -733,15 +983,45 @@ Additional features
 1
 
 SWITCH
-841
-182
-944
-215
+787
+175
+978
+208
 collision
 collision
 1
 1
 -1000
+
+TEXTBOX
+993
+101
+1143
+143
+Default setting: off\nRecommended to keep this off when using dfs or bfs
+11
+0.0
+1
+
+TEXTBOX
+999
+174
+1149
+216
+Default setting: on\nRecommended to turn this off when using dfs or bfs
+11
+0.0
+1
+
+TEXTBOX
+1211
+75
+1361
+355
+Known bugs\n\n1. two player mode when both using dfs or both using bfs\n\n2. sometimes on some maps dfs/bfs will go through walls (improved this but still happens but very rarely)\n\n3. sometimes dfs/bfs will travel at an angle I belive the cause of this is the same as the cause for bug 2 which I belive is when the path list does not correctly remove items and it ends up having a patch path with no unexplored patches next to it
+11
+0.0
+1
 
 @#$#@#$#@
 # CMP2020 -- Assessment Item 1
