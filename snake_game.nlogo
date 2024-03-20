@@ -1017,7 +1017,7 @@ SWITCH
 135
 food-random-movement
 food-random-movement
-1
+0
 1
 -1000
 
@@ -1089,13 +1089,19 @@ __If you find any bugs in the code or have any questions regarding the assessmen
 
 ## Your details
 
-Name:
+Name: Zac Bates	
 
-Student Number:
+Student Number: 26423816
 
 ## Extensions made
 
 (a brief description of the extensions you have made -- that go beyond the search algorithms studied during this module.)
+
+I added dijkstra's algorithm for pathfinding, in this case dijkstra's uses a function called setpatchdist which gives all patches a dist value which is how many patches away from the food it is and dijkstra's will make the snake go to the lowest of the neighboring4 patches is there are 2 of the same value it will randomly choose. dijkstra's will always choose the fastest path
+
+I also added an option to make the food move randomly this allows it to show the algorithms working better.
+
+I also added an option to turn off collision, this was just for testing purposes
 
 
 
